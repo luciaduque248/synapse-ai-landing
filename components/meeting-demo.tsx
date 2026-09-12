@@ -9,12 +9,14 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Copy,
+  Cpu,
   FileAudio2,
   FileText,
   Gauge,
   LayoutDashboard,
   ListChecks,
   LoaderCircle,
+  LockKeyhole,
   RotateCcw,
   Sparkles,
   Upload,
@@ -22,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { transcribeAudioLocally, type LocalTranscriptionProgress } from "@/lib/local-whisper";
 
 type Task = { id: string; title: string; owner: string; timing: string };
 type MeetingSample = {
@@ -39,13 +42,13 @@ type MeetingSample = {
 type View = "overview" | "transcript" | "decisions" | "tasks" | "risks";
 type Analysis = Pick<MeetingSample, "summary" | "decisions" | "tasks" | "risks" | "checkpoint">;
 type AnalysisPhase = "ready" | "analyzing";
-type TranscriptionPhase = "idle" | "ready" | "transcribing" | "done" | "error";
+type TranscriptionPhase = "idle" | "ready" | "preparing" | "transcribing" | "done" | "error";
 type ViewItem = { id: View; label: string; icon: LucideIcon };
 
 const ACCEPTED_TEXT_EXTENSIONS = ["txt", "md", "csv", "json", "srt", "vtt"];
 const ACCEPTED_AUDIO_EXTENSIONS = ["mp3", "m4a", "wav", "webm", "ogg", "mp4"];
 const MAX_TEXT_BYTES = 1024 * 1024;
-const MAX_AUDIO_BYTES = 4 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 12 * 1024 * 1024;
 
 const samples: MeetingSample[] = [
   {
@@ -116,7 +119,9 @@ const samples: MeetingSample[] = [
 
 function analyzeEditedNote(note: string, sample: MeetingSample): Analysis {
   const clean = note.trim();
-  if (clean === sample.note) return { summary: sample.summary, decisions: sample.decisions, tasks: sample.tasks, risks: sample.risks, checkpoint: sample.checkpoint };
+  if (clean === sample.note) {
+    return { summary: sample.summary, decisions: sample.decisions, tasks: sample.tasks, risks: sample.risks, checkpoint: sample.checkpoint };
+  }
   const sentences = clean.split(/[.\n]+/).map((sentence) => sentence.trim()).filter(Boolean);
   const summarySource = sentences.slice(0, 2).join(". ");
   const decisions = sentences.filter((sentence) => /decid|queda|mant|release|lanzamiento|prioridad|siguiente paso|aprob|acord/i.test(sentence)).slice(0, 3);
@@ -169,18 +174,34 @@ export function MeetingDemo() {
   const [textFileName, setTextFileName] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [transcriptionPhase, setTranscriptionPhase] = useState<TranscriptionPhase>("idle");
+  const [transcriptionProgress, setTranscriptionProgress] = useState(0);
+  const [transcriptionDetail, setTranscriptionDetail] = useState("Whisper runs locally in your browser.");
+  const [transcriptionBackend, setTranscriptionBackend] = useState<"WebGPU" | "WASM" | "">("");
   const [fileError, setFileError] = useState("");
   const [dirty, setDirty] = useState(false);
 
   const sample = useMemo(() => samples.find((item) => item.id === sampleId) ?? samples[0], [sampleId]);
   const sourceTitle = customSourceName || audioFile?.name || sample.label;
-  const isBusy = phase === "analyzing" || transcriptionPhase === "transcribing";
+  const isBusy = phase === "analyzing" || transcriptionPhase === "preparing" || transcriptionPhase === "transcribing";
   const transcript = useMemo(() => customSourceName || note !== sample.note ? buildImportedTranscript(note) : sample.transcript, [customSourceName, note, sample]);
 
   const resetWorkspaceToSample = (next: MeetingSample) => {
-    setSampleId(next.id); setNote(next.note); setAnalysis(analyzeEditedNote(next.note, next));
-    setCustomSourceName(""); setCustomSourceOriginal(""); setTextFileName(""); setAudioFile(null); setTranscriptionPhase("idle");
-    setFileError(""); setDirty(false); setCompletedTasks([]); setView("overview"); setCopied(false);
+    setSampleId(next.id);
+    setNote(next.note);
+    setAnalysis(analyzeEditedNote(next.note, next));
+    setCustomSourceName("");
+    setCustomSourceOriginal("");
+    setTextFileName("");
+    setAudioFile(null);
+    setTranscriptionPhase("idle");
+    setTranscriptionProgress(0);
+    setTranscriptionBackend("");
+    setTranscriptionDetail("Whisper runs locally in your browser.");
+    setFileError("");
+    setDirty(false);
+    setCompletedTasks([]);
+    setView("overview");
+    setCopied(false);
   };
 
   const loadTextFile = async (file: File) => {
@@ -191,54 +212,133 @@ export function MeetingDemo() {
     try {
       const text = (await file.text()).trim();
       if (!text) return setFileError("El archivo está vacío o no contiene texto legible.");
-      setTextFileName(file.name); setAudioFile(null); setTranscriptionPhase("idle"); setCustomSourceName(file.name); setCustomSourceOriginal(text);
-      setNote(text); setDirty(true); setCompletedTasks([]); setCopied(false); setView("overview");
-    } catch { setFileError("No se pudo leer el archivo localmente."); }
+      setTextFileName(file.name);
+      setAudioFile(null);
+      setTranscriptionPhase("idle");
+      setCustomSourceName(file.name);
+      setCustomSourceOriginal(text);
+      setNote(text);
+      setDirty(true);
+      setCompletedTasks([]);
+      setCopied(false);
+      setView("overview");
+    } catch {
+      setFileError("No se pudo leer el archivo localmente.");
+    }
   };
 
   const handleTextFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]; if (file) await loadTextFile(file); event.target.value = "";
+    const file = event.target.files?.[0];
+    if (file) await loadTextFile(file);
+    event.target.value = "";
   };
 
   const handleAudioFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
     setFileError("");
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-    if (!ACCEPTED_AUDIO_EXTENSIONS.includes(extension)) { setFileError("Formato de audio no compatible. Usa MP3, M4A, WAV, WEBM, OGG o MP4."); setAudioFile(null); setTranscriptionPhase("error"); return; }
-    if (file.size > MAX_AUDIO_BYTES) { setFileError("El audio supera 4 MB. Usa un clip más corto para esta demo en Vercel."); setAudioFile(null); setTranscriptionPhase("error"); return; }
-    setAudioFile(file); setTextFileName(""); setTranscriptionPhase("ready"); setCopied(false);
+    if (!ACCEPTED_AUDIO_EXTENSIONS.includes(extension)) {
+      setFileError("Formato de audio no compatible. Usa MP3, M4A, WAV, WEBM, OGG o MP4.");
+      setAudioFile(null);
+      setTranscriptionPhase("error");
+      return;
+    }
+    if (file.size > MAX_AUDIO_BYTES) {
+      setFileError("El audio supera 12 MB. Para esta demo local usa un clip más corto.");
+      setAudioFile(null);
+      setTranscriptionPhase("error");
+      return;
+    }
+    setAudioFile(file);
+    setTextFileName("");
+    setTranscriptionPhase("ready");
+    setTranscriptionProgress(0);
+    setTranscriptionBackend("");
+    setTranscriptionDetail("Ready for private, on-device transcription.");
+    setCopied(false);
+  };
+
+  const onLocalProgress = (progress: LocalTranscriptionProgress) => {
+    if (progress.phase === "decoding" || progress.phase === "loading") setTranscriptionPhase("preparing");
+    if (progress.phase === "transcribing") setTranscriptionPhase("transcribing");
+    if (typeof progress.progress === "number") setTranscriptionProgress(progress.progress);
+    if (progress.backend) setTranscriptionBackend(progress.backend);
+    if (progress.detail) setTranscriptionDetail(progress.detail);
   };
 
   const transcribeAudio = async () => {
     if (!audioFile) return;
-    setTranscriptionPhase("transcribing"); setFileError(""); setCopied(false);
+    setTranscriptionPhase("preparing");
+    setTranscriptionProgress(0);
+    setFileError("");
+    setCopied(false);
     try {
-      const formData = new FormData(); formData.append("file", audioFile, audioFile.name);
-      const response = await fetch("/api/transcribe", { method: "POST", body: formData });
-      const payload = (await response.json()) as { text?: string; error?: string };
-      if (!response.ok || !payload.text) throw new Error(payload.error || "No se pudo transcribir el audio.");
-      const transcriptText = payload.text.trim();
-      setCustomSourceName(audioFile.name); setCustomSourceOriginal(transcriptText); setNote(transcriptText); setDirty(true); setCompletedTasks([]); setView("transcript"); setTranscriptionPhase("done");
-    } catch (error) { setTranscriptionPhase("error"); setFileError(error instanceof Error ? error.message : "No se pudo transcribir el audio."); }
+      const result = await transcribeAudioLocally(audioFile, onLocalProgress);
+      setCustomSourceName(audioFile.name);
+      setCustomSourceOriginal(result.text);
+      setNote(result.text);
+      setDirty(true);
+      setCompletedTasks([]);
+      setView("transcript");
+      setTranscriptionBackend(result.backend);
+      setTranscriptionProgress(100);
+      setTranscriptionDetail("Transcript ready. Review it before analysis.");
+      setTranscriptionPhase("done");
+    } catch (error) {
+      setTranscriptionPhase("error");
+      setFileError(error instanceof Error ? error.message : "No se pudo transcribir el audio localmente.");
+    }
   };
 
   const runAnalysis = () => {
     if (!note.trim()) return setFileError("Añade notas, sube un transcript o transcribe un audio antes de analizar.");
-    setPhase("analyzing"); setFileError(""); setCopied(false);
-    window.setTimeout(() => { setAnalysis(analyzeEditedNote(note, sample)); setCompletedTasks([]); setView("overview"); setDirty(false); setPhase("ready"); }, 700);
+    setPhase("analyzing");
+    setFileError("");
+    setCopied(false);
+    window.setTimeout(() => {
+      setAnalysis(analyzeEditedNote(note, sample));
+      setCompletedTasks([]);
+      setView("overview");
+      setDirty(false);
+      setPhase("ready");
+    }, 700);
   };
 
   const resetNote = () => {
-    const resetValue = customSourceOriginal || sample.note; setNote(resetValue); setAnalysis(analyzeEditedNote(resetValue, sample)); setDirty(false); setFileError(""); setCompletedTasks([]); setView("overview");
+    const resetValue = customSourceOriginal || sample.note;
+    setNote(resetValue);
+    setAnalysis(analyzeEditedNote(resetValue, sample));
+    setDirty(false);
+    setFileError("");
+    setCompletedTasks([]);
+    setView("overview");
   };
 
   const clearCustomSource = () => {
-    setCustomSourceName(""); setCustomSourceOriginal(""); setTextFileName(""); setAudioFile(null); setTranscriptionPhase("idle"); setNote(sample.note); setAnalysis(analyzeEditedNote(sample.note, sample)); setDirty(false); setFileError(""); setCompletedTasks([]); setView("overview");
+    setCustomSourceName("");
+    setCustomSourceOriginal("");
+    setTextFileName("");
+    setAudioFile(null);
+    setTranscriptionPhase("idle");
+    setTranscriptionProgress(0);
+    setTranscriptionBackend("");
+    setNote(sample.note);
+    setAnalysis(analyzeEditedNote(sample.note, sample));
+    setDirty(false);
+    setFileError("");
+    setCompletedTasks([]);
+    setView("overview");
   };
 
   const clearAudioSelection = () => {
     if (customSourceName === audioFile?.name) return clearCustomSource();
-    setAudioFile(null); setTranscriptionPhase("idle"); setFileError("");
+    setAudioFile(null);
+    setTranscriptionPhase("idle");
+    setTranscriptionProgress(0);
+    setTranscriptionBackend("");
+    setFileError("");
   };
 
   const toggleTask = (taskId: string) => setCompletedTasks((current) => current.includes(taskId) ? current.filter((id) => id !== taskId) : [...current, taskId]);
@@ -246,13 +346,27 @@ export function MeetingDemo() {
   const copyBrief = async () => {
     if (dirty || isBusy) return;
     const brief = [`SYNAPSE — ${sourceTitle}`, `Summary: ${analysis.summary}`, "Decisions:", ...analysis.decisions.map((item) => `- ${item}`), "Tasks:", ...analysis.tasks.map((item) => `- ${item.title} — ${item.owner} — ${item.timing}`), "Risks:", ...analysis.risks.map((item) => `- ${item}`), `Next checkpoint: ${analysis.checkpoint}`].join("\n");
-    try { await navigator.clipboard.writeText(brief); setCopied(true); window.setTimeout(() => setCopied(false), 1800); }
-    catch { const textarea = document.createElement("textarea"); textarea.value = brief; textarea.style.position = "fixed"; textarea.style.opacity = "0"; document.body.appendChild(textarea); textarea.select(); document.execCommand("copy"); textarea.remove(); setCopied(true); window.setTimeout(() => setCopied(false), 1800); }
+    try {
+      await navigator.clipboard.writeText(brief);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = brief;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    }
   };
 
-  const resultTitle = transcriptionPhase === "transcribing" ? "Transcribing audio…" : phase === "analyzing" ? "Structuring meeting…" : dirty ? "Ready to analyze" : "Meeting brief ready";
-  const resultStatus = transcriptionPhase === "transcribing" ? "TRANSCRIBING" : phase === "analyzing" ? "WORKING" : dirty ? "PENDING" : "READY";
-  const resultStatusClass = transcriptionPhase === "transcribing" || phase === "analyzing" ? "ready-pill is-processing" : dirty ? "ready-pill is-pending" : "ready-pill";
+  const resultTitle = transcriptionPhase === "preparing" ? "Preparing local Whisper…" : transcriptionPhase === "transcribing" ? "Transcribing locally…" : phase === "analyzing" ? "Structuring meeting…" : dirty ? "Ready to analyze" : "Meeting brief ready";
+  const resultStatus = transcriptionPhase === "preparing" ? "PREPARING" : transcriptionPhase === "transcribing" ? "TRANSCRIBING" : phase === "analyzing" ? "WORKING" : dirty ? "PENDING" : "READY";
+  const resultStatusClass = transcriptionPhase === "preparing" || transcriptionPhase === "transcribing" || phase === "analyzing" ? "ready-pill is-processing" : dirty ? "ready-pill is-pending" : "ready-pill";
 
   return (
     <div className="demo-app workspace-v2">
@@ -294,15 +408,21 @@ export function MeetingDemo() {
               </label>
               <label className="input-method-card is-audio">
                 <input type="file" accept=".mp3,.m4a,.wav,.webm,.ogg,.mp4,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg" onChange={handleAudioFileChange} />
-                <span className="input-method-icon"><AudioLines size={20} /></span><span><strong>Upload meeting audio</strong><small>MP3, M4A, WAV, WEBM, OGG or MP4 · 4 MB</small></span><ArrowRight size={16} className="input-method-arrow" />
+                <span className="input-method-icon"><AudioLines size={20} /></span><span><strong>Upload meeting audio</strong><small>Local Whisper · up to 12 MB</small></span><ArrowRight size={16} className="input-method-arrow" />
               </label>
             </div>
 
             {textFileName && <div className="source-file-pill"><FileText size={15} /><span>{textFileName}</span><button type="button" onClick={clearCustomSource} aria-label="Quitar transcript"><X size={14} /></button></div>}
             {audioFile && <div className="audio-file-card">
-              <div className="audio-file-main"><span className="audio-file-icon"><FileAudio2 size={18} /></span><div><span className="audio-file-kicker">{transcriptionPhase === "done" ? "TRANSCRIPT READY" : "AUDIO READY"}</span><strong title={audioFile.name}>{audioFile.name}</strong><small>{formatBytes(audioFile.size)}</small></div></div>
-              <div className="audio-file-actions"><button type="button" className="icon-button" onClick={clearAudioSelection} disabled={transcriptionPhase === "transcribing"} aria-label="Quitar audio"><X size={15} /></button><button type="button" className="transcribe-button" onClick={transcribeAudio} disabled={transcriptionPhase === "transcribing"}>{transcriptionPhase === "transcribing" ? <LoaderCircle size={15} className="spin" /> : <AudioLines size={15} />}{transcriptionPhase === "transcribing" ? "Transcribing…" : transcriptionPhase === "done" ? "Transcribe again" : "Transcribe audio"}</button></div>
+              <div className="audio-file-main"><span className="audio-file-icon"><FileAudio2 size={18} /></span><div><span className="audio-file-kicker">{transcriptionPhase === "done" ? "TRANSCRIPT READY" : "PRIVATE AUDIO"}</span><strong title={audioFile.name}>{audioFile.name}</strong><small>{formatBytes(audioFile.size)}{transcriptionBackend ? ` · ${transcriptionBackend}` : ""}</small></div></div>
+              <div className="audio-file-actions"><button type="button" className="icon-button" onClick={clearAudioSelection} disabled={isBusy} aria-label="Quitar audio"><X size={15} /></button><button type="button" className="transcribe-button" onClick={transcribeAudio} disabled={isBusy}>{isBusy && phase !== "analyzing" ? <LoaderCircle size={15} className="spin" /> : <AudioLines size={15} />}{transcriptionPhase === "preparing" ? "Preparing model…" : transcriptionPhase === "transcribing" ? "Transcribing…" : transcriptionPhase === "done" ? "Transcribe again" : "Transcribe locally"}</button></div>
             </div>}
+
+            {audioFile && (transcriptionPhase === "preparing" || transcriptionPhase === "transcribing") && <div className="local-model-progress" aria-live="polite">
+              <div className="local-model-progress-head"><span>{transcriptionDetail}</span><strong>{transcriptionProgress ? `${transcriptionProgress}%` : transcriptionBackend || "LOCAL"}</strong></div>
+              <div className="local-model-progress-track"><i style={{ width: `${Math.max(6, transcriptionProgress)}%` }} /></div>
+            </div>}
+
             {fileError && <p className="upload-error" role="alert"><AlertTriangle size={14} />{fileError}</p>}
 
             <label className="note-editor editor-v2">
@@ -310,14 +430,14 @@ export function MeetingDemo() {
               <textarea value={note} onChange={(event) => { setNote(event.target.value); setDirty(true); setCopied(false); }} rows={9} />
             </label>
 
-            {transcriptionPhase === "done" && <p className="transcription-success"><CheckCircle2 size={14} />Audio transcribed. Review the text before analysis.</p>}
+            {transcriptionPhase === "done" && <p className="transcription-success"><CheckCircle2 size={14} />Audio transcribed locally. Review the text before analysis.</p>}
             {dirty && <p className="pending-note">Changes detected. Analyze to refresh the meeting brief.</p>}
 
             <div className="source-actions source-actions-v2">
               <button type="button" className="reset-button" onClick={resetNote} disabled={isBusy}><RotateCcw size={15} />Reset</button>
               <button type="button" className="analyze-button" onClick={runAnalysis} disabled={isBusy}>{phase === "analyzing" ? <LoaderCircle size={16} className="spin" /> : <Sparkles size={16} />}{phase === "analyzing" ? "Analyzing…" : "Analyze meeting"}<ArrowRight size={16} /></button>
             </div>
-            <p className="demo-disclaimer">Text stays in your browser. Audio is sent only to the transcription endpoint and is not stored by this demo.</p>
+            <p className="local-privacy-note"><LockKeyhole size={13} />Your audio stays on this device. The first run downloads the open-source Whisper model and caches it in the browser.</p>
           </section>
 
           <section className="insight-column" aria-live="polite" aria-busy={isBusy}>
@@ -328,7 +448,8 @@ export function MeetingDemo() {
             </div>
 
             <div className="result-content result-content-v2">
-              {transcriptionPhase === "transcribing" ? <div className="processing-state"><LoaderCircle size={30} className="spin" /><strong>Transcribing the meeting</strong><span>Converting voice into editable text…</span></div>
+              {transcriptionPhase === "preparing" ? <div className="processing-state"><Cpu size={30} /><strong>Preparing local Whisper</strong><span>{transcriptionDetail}</span></div>
+              : transcriptionPhase === "transcribing" ? <div className="processing-state"><LoaderCircle size={30} className="spin" /><strong>Transcribing on this device</strong><span>Audio never leaves your browser.</span></div>
               : phase === "analyzing" ? <div className="processing-state"><Sparkles size={30} /><strong>Structuring the meeting</strong><span>Detecting decisions, owners, tasks and risks…</span></div>
               : dirty ? <div className="pending-state"><Sparkles size={26} /><span>INPUT READY</span><strong>Your meeting is ready to analyze.</strong><p>Review the transcript, then run analysis to refresh decisions, tasks and risks.</p></div>
               : view === "overview" ? <div className="overview-tab overview-v2">

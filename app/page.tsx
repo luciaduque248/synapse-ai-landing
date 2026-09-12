@@ -1,10 +1,11 @@
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { HeroBrain } from "@/components/hero-brain";
 import { MeetingDemo } from "@/components/meeting-demo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const features = [
   ["01", "Capture", "Pega una transcripción, edita notas o sube un archivo de texto o audio para probar el flujo con tu propio contenido."],
-  ["02", "Transcribe", "Cuando subes audio, SYNAPSE lo convierte en texto antes de pasar al análisis de la reunión."],
+  ["02", "Transcribe locally", "El audio se convierte en texto en tu propio navegador con Whisper. No necesita API key ni enviar la reunión a un servidor."],
   ["03", "Understand", "Separa decisiones, compromisos, responsables, fechas y posibles bloqueos."],
   ["04", "Follow up", "Convierte lo hablado en un brief claro con tareas, riesgos y próximos pasos."],
 ];
@@ -15,16 +16,20 @@ const faqs = [
     "No. Es un concepto ficticio de portafolio diseñado para demostrar UX/UI y frontend aplicado a meeting intelligence.",
   ],
   [
-    "¿La transcripción de audio sí es real?",
-    "Sí. Los clips de audio compatibles se envían desde la API del proyecto a un servicio real de speech-to-text. El transcript vuelve al workspace para que puedas revisarlo antes de analizar la reunión.",
+    "¿La transcripción de audio sí funciona?",
+    "Sí. La demo usa Whisper Tiny multilingüe mediante Transformers.js. El modelo corre en tu navegador: usa WebGPU cuando está disponible y cae a WASM/CPU cuando no lo está.",
+  ],
+  [
+    "¿Tengo que pagar o configurar una API key?",
+    "No. La transcripción no consume una API de pago. La primera vez el navegador descarga el modelo abierto desde Hugging Face y después puede reutilizarlo desde caché.",
   ],
   [
     "¿Qué archivos puedo subir?",
-    "Para texto: TXT, MD, CSV, JSON, SRT y VTT de hasta 1 MB. Para audio: MP3, M4A, WAV, WEBM, OGG o MP4 de hasta 4 MB en esta demo desplegada en Vercel.",
+    "Para texto: TXT, MD, CSV, JSON, SRT y VTT de hasta 1 MB. Para audio: MP3, M4A, WAV, WEBM, OGG o MP4 de hasta 12 MB; la decodificación depende del soporte multimedia del navegador.",
   ],
   [
     "¿La app guarda mi reunión?",
-    "No hay base de datos en esta demo. Los transcripts de texto se leen en el navegador. El audio sí sale del navegador para ser transcrito, pero SYNAPSE no lo persiste en una base de datos propia.",
+    "No hay base de datos en esta demo. Los archivos de texto y audio se procesan en el dispositivo. El audio no se envía a un endpoint de transcripción.",
   ],
   [
     "¿Los datos del dashboard son reales?",
@@ -65,7 +70,7 @@ export default function Home() {
             <div className="hero-eyebrow"><span>✦</span> AI MEETING INTELLIGENCE · PORTFOLIO CONCEPT</div>
             <h1>Cada reunión termina con <span>decisiones y tareas claras.</span></h1>
             <p>
-              SYNAPSE recibe notas, transcripts o audio, convierte la conversación en texto y la organiza en decisiones, responsables, tareas, fechas y riesgos.
+              SYNAPSE recibe notas, transcripts o audio, convierte la conversación en texto directamente en el navegador y la organiza en decisiones, responsables, tareas, fechas y riesgos.
             </p>
 
             <div className="hero-actions">
@@ -74,7 +79,7 @@ export default function Home() {
             </div>
 
             <div className="hero-proof">
-              <span>Audio</span><span>Transcript</span><span>Decisions</span><span>Tasks</span>
+              <span>Local Whisper</span><span>Transcript</span><span>Decisions</span><span>Tasks</span>
             </div>
           </div>
 
@@ -85,7 +90,7 @@ export default function Home() {
       <section id="product" className="value-strip">
         <div className="site-width value-strip-inner">
           <span>BEFORE</span><b>Meeting audio / transcript</b><i>→</i>
-          <span>SYNAPSE</span><b>Transcribe + understand</b><i>→</i>
+          <span>SYNAPSE</span><b>Local transcription + understanding</b><i>→</i>
           <span>AFTER</span><b>Summary · Decisions · Tasks · Risks</b>
         </div>
       </section>
@@ -114,7 +119,7 @@ export default function Home() {
             <h2>Prueba el flujo con una reunión propia.</h2>
           </div>
           <p>
-            Usa un ejemplo, pega tus notas, sube un transcript o carga un audio corto. SYNAPSE transcribe el audio, te deja revisar el texto y después genera el brief operativo.
+            Usa un ejemplo, pega tus notas, sube un transcript o carga un audio corto. La transcripción ocurre localmente con Whisper; revisas el texto y después generas el brief operativo.
           </p>
         </div>
         <div className="site-width product-demo-frame"><MeetingDemo /></div>
@@ -142,9 +147,9 @@ export default function Home() {
               </div>
               <div className="decision-feed">
                 <div className="chart-head"><span>Recent meeting outcomes</span><b>Sample</b></div>
-                <article><i>✓</i><div><strong>Release stays Friday</strong><span>Launch sync · 10:42</span></div></article>
-                <article><i>✓</i><div><strong>Technical demo approved</strong><span>Sales handoff · 09:18</span></div></article>
-                <article><i>!</i><div><strong>Export bug blocks RC</strong><span>Bug triage · Yesterday</span></div></article>
+                <article><i><CheckCircle2 size={14} /></i><div><strong>Release stays Friday</strong><span>Launch sync · 10:42</span></div></article>
+                <article><i><CheckCircle2 size={14} /></i><div><strong>Technical demo approved</strong><span>Sales handoff · 09:18</span></div></article>
+                <article><i><AlertTriangle size={14} /></i><div><strong>Export bug blocks RC</strong><span>Bug triage · Yesterday</span></div></article>
               </div>
             </div>
           </div>
@@ -153,7 +158,7 @@ export default function Home() {
 
       <section id="faq" className="faq-section">
         <div className="site-width faq-layout">
-          <div className="section-heading"><span>FAQ</span><h2>Una demo clara, sin funciones ficticias disfrazadas de reales.</h2></div>
+          <div className="section-heading"><span>FAQ</span><h2>Una demo clara, privada y sin una API de pago detrás.</h2></div>
           <div className="faq-list">
             {faqs.map(([q,a], i) => <details key={q} open={i===0}><summary><span>0{i+1}</span><strong>{q}</strong><b aria-hidden="true">+</b></summary><p>{a}</p></details>)}
           </div>
@@ -164,7 +169,7 @@ export default function Home() {
         <div className="final-glow" />
         <div className="site-width final-inner">
           <div className="final-brain-mark" aria-hidden="true">S</div>
-          <div><span>MEETING → TRANSCRIPT → DECISION → ACTION</span><h2>Que la próxima reunión termine con trabajo claro.</h2><p>Sube audio o texto, revisa el transcript y conviértelo en seguimiento accionable.</p></div>
+          <div><span>MEETING → TRANSCRIPT → DECISION → ACTION</span><h2>Que la próxima reunión termine con trabajo claro.</h2><p>Sube audio o texto, transcribe localmente, revisa el transcript y conviértelo en seguimiento accionable.</p></div>
           <a href="#demo" className="primary-action">Probar reunión <span>→</span></a>
         </div>
       </section>
@@ -172,7 +177,7 @@ export default function Home() {
       <footer className="site-footer">
         <div className="site-width footer-inner">
           <div className="brand"><span className="brand-mark">S</span><span><b>SYNAPSE</b><small>MEETING INTELLIGENCE</small></span></div>
-          <p>B2B SaaS · Meeting intelligence · Portfolio concept</p>
+          <p>B2B SaaS · Local meeting intelligence · Portfolio concept</p>
           <p>UX/UI + Frontend by Sara Duque</p>
         </div>
       </footer>
