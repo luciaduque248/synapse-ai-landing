@@ -1,5 +1,4 @@
-import Image from "next/image";
-import brainPng from "@/components/cerebro_3d_neon_transparente.png";
+import { HeroBrain } from "@/components/hero-brain";
 import { MeetingDemo } from "@/components/meeting-demo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -79,22 +78,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="brain-visual" aria-label="SYNAPSE transforma conversación en decisiones y tareas">
-            <div className="brain-orbit brain-orbit-a" />
-            <div className="brain-orbit brain-orbit-b" />
-            <Image
-              src={brainPng}
-              alt="Cerebro 3D de SYNAPSE AI representando conexiones entre conversación, decisiones y tareas"
-              className="brain-asset"
-              priority
-              sizes="(max-width: 980px) 82vw, 500px"
-            />
-            <div className="brain-tag brain-tag--meetings"><span>INPUT</span><strong>Meeting audio</strong></div>
-            <div className="brain-tag brain-tag--notes"><span>INPUT</span><strong>Transcript + notes</strong></div>
-            <div className="brain-tag brain-tag--decision"><span>OUTPUT</span><strong>Decisions</strong></div>
-            <div className="brain-tag brain-tag--actions"><span>OUTPUT</span><strong>Tasks + owners</strong></div>
-            <div className="brain-core-label"><span>SYNAPSE CORE</span><strong>Meeting → execution</strong></div>
-          </div>
+          <HeroBrain />
         </div>
       </section>
 
