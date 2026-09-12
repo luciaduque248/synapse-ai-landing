@@ -2,18 +2,20 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./theme.css";
 import "./demo-enhancements.css";
+import "./product-enhancements.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://synapse-ai-landing-nine.vercel.app"),
   title: "SYNAPSE AI — Meeting Intelligence",
   description:
-    "Conceptual B2B meeting-intelligence product that turns meeting context into summaries, decisions, tasks, owners, deadlines and risks.",
+    "Conceptual B2B meeting-intelligence product that turns meeting audio and transcripts into summaries, decisions, tasks, owners, deadlines and risks.",
   applicationName: "SYNAPSE AI",
   authors: [{ name: "Sara Duque" }],
   creator: "Sara Duque",
   keywords: [
     "meeting intelligence",
     "AI meetings",
+    "audio transcription",
     "meeting summary",
     "decision tracking",
     "task extraction",
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SYNAPSE AI — Meeting Intelligence",
     description:
-      "Portfolio concept for turning meetings into summaries, decisions, tasks, owners and next steps.",
+      "Portfolio concept for turning meeting audio and transcripts into summaries, decisions, tasks, owners and next steps.",
     url: "/",
     siteName: "SYNAPSE AI",
     locale: "es_CO",
@@ -39,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "SYNAPSE AI — Meeting Intelligence",
     description:
-      "B2B meeting-intelligence portfolio concept focused on meeting-to-execution workflows.",
+      "B2B meeting-intelligence portfolio concept with audio transcription and meeting-to-execution workflows.",
   },
 };
 

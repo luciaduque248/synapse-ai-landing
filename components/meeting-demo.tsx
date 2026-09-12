@@ -17,9 +17,13 @@ type MeetingSample = {
 };
 type View = "overview" | "transcript" | "decisions" | "tasks" | "risks";
 type Analysis = Pick<MeetingSample, "summary" | "decisions" | "tasks" | "risks" | "checkpoint">;
+type AnalysisPhase = "ready" | "analyzing";
+type TranscriptionPhase = "idle" | "ready" | "transcribing" | "done" | "error";
 
-const ACCEPTED_EXTENSIONS = ["txt", "md", "csv", "json", "srt", "vtt"];
-const MAX_FILE_BYTES = 1024 * 1024;
+const ACCEPTED_TEXT_EXTENSIONS = ["txt", "md", "csv", "json", "srt", "vtt"];
+const ACCEPTED_AUDIO_EXTENSIONS = ["mp3", "m4a", "wav", "webm", "ogg", "mp4"];
+const MAX_TEXT_BYTES = 1024 * 1024;
+const MAX_AUDIO_BYTES = 4 * 1024 * 1024;
 
 const samples: MeetingSample[] = [
   {
@@ -138,7 +142,12 @@ function analyzeEditedNote(note: string, sample: MeetingSample): Analysis {
 function buildImportedTranscript(note: string) {
   const byLine = note.split(/\n+/).map((line) => line.trim()).filter(Boolean);
   const source = byLine.length > 1 ? byLine : note.split(/(?<=[.!?])\s+/).map((line) => line.trim()).filter(Boolean);
-  return source.slice(0, 14).map((text, index) => ({ speaker: "Imported", time: `0${index + 1}`.slice(-2), text }));
+  return source.slice(0, 18).map((text, index) => ({ speaker: "Imported", time: `0${index + 1}`.slice(-2), text }));
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function MeetingDemo() {
@@ -146,27 +155,34 @@ export function MeetingDemo() {
   const [note, setNote] = useState(samples[0].note);
   const [analysis, setAnalysis] = useState<Analysis>(() => analyzeEditedNote(samples[0].note, samples[0]));
   const [view, setView] = useState<View>("overview");
-  const [phase, setPhase] = useState<"ready" | "analyzing">("ready");
+  const [phase, setPhase] = useState<AnalysisPhase>("ready");
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState("");
-  const [uploadedText, setUploadedText] = useState("");
+  const [customSourceName, setCustomSourceName] = useState("");
+  const [customSourceOriginal, setCustomSourceOriginal] = useState("");
+  const [textFileName, setTextFileName] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [transcriptionPhase, setTranscriptionPhase] = useState<TranscriptionPhase>("idle");
   const [fileError, setFileError] = useState("");
   const [dirty, setDirty] = useState(false);
 
   const sample = useMemo(() => samples.find((item) => item.id === sampleId) ?? samples[0], [sampleId]);
-  const sourceTitle = uploadedFileName || sample.label;
+  const sourceTitle = customSourceName || audioFile?.name || sample.label;
+  const isBusy = phase === "analyzing" || transcriptionPhase === "transcribing";
   const transcript = useMemo(
-    () => uploadedFileName || note !== sample.note ? buildImportedTranscript(note) : sample.transcript,
-    [note, sample, uploadedFileName],
+    () => customSourceName || note !== sample.note ? buildImportedTranscript(note) : sample.transcript,
+    [customSourceName, note, sample],
   );
 
-  const selectSample = (next: MeetingSample) => {
+  const resetWorkspaceToSample = (next: MeetingSample) => {
     setSampleId(next.id);
     setNote(next.note);
     setAnalysis(analyzeEditedNote(next.note, next));
-    setUploadedFileName("");
-    setUploadedText("");
+    setCustomSourceName("");
+    setCustomSourceOriginal("");
+    setTextFileName("");
+    setAudioFile(null);
+    setTranscriptionPhase("idle");
     setFileError("");
     setDirty(false);
     setCompletedTasks([]);
@@ -174,15 +190,15 @@ export function MeetingDemo() {
     setCopied(false);
   };
 
-  const loadFile = async (file: File) => {
+  const loadTextFile = async (file: File) => {
     setFileError("");
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-    if (!ACCEPTED_EXTENSIONS.includes(extension)) {
-      setFileError("Formato no compatible. Usa TXT, MD, CSV, JSON, SRT o VTT.");
+    if (!ACCEPTED_TEXT_EXTENSIONS.includes(extension)) {
+      setFileError("Formato de texto no compatible. Usa TXT, MD, CSV, JSON, SRT o VTT.");
       return;
     }
-    if (file.size > MAX_FILE_BYTES) {
-      setFileError("El archivo supera 1 MB. Usa un transcript más pequeño para esta demo local.");
+    if (file.size > MAX_TEXT_BYTES) {
+      setFileError("El transcript supera 1 MB. Usa un archivo más pequeño para esta demo.");
       return;
     }
 
@@ -192,8 +208,11 @@ export function MeetingDemo() {
         setFileError("El archivo está vacío o no contiene texto legible.");
         return;
       }
-      setUploadedFileName(file.name);
-      setUploadedText(text);
+      setTextFileName(file.name);
+      setAudioFile(null);
+      setTranscriptionPhase("idle");
+      setCustomSourceName(file.name);
+      setCustomSourceOriginal(text);
       setNote(text);
       setDirty(true);
       setCompletedTasks([]);
@@ -204,15 +223,76 @@ export function MeetingDemo() {
     }
   };
 
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleTextFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) await loadFile(file);
+    if (file) await loadTextFile(file);
     event.target.value = "";
+  };
+
+  const handleAudioFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setFileError("");
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!ACCEPTED_AUDIO_EXTENSIONS.includes(extension)) {
+      setFileError("Formato de audio no compatible. Usa MP3, M4A, WAV, WEBM, OGG o MP4.");
+      setAudioFile(null);
+      setTranscriptionPhase("error");
+      return;
+    }
+    if (file.size > MAX_AUDIO_BYTES) {
+      setFileError("El audio supera 4 MB. Usa un clip más corto para esta demo en Vercel.");
+      setAudioFile(null);
+      setTranscriptionPhase("error");
+      return;
+    }
+
+    setAudioFile(file);
+    setTextFileName("");
+    setTranscriptionPhase("ready");
+    setCopied(false);
+  };
+
+  const transcribeAudio = async () => {
+    if (!audioFile) return;
+
+    setTranscriptionPhase("transcribing");
+    setFileError("");
+    setCopied(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", audioFile, audioFile.name);
+
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as { text?: string; error?: string };
+
+      if (!response.ok || !payload.text) {
+        throw new Error(payload.error || "No se pudo transcribir el audio.");
+      }
+
+      const transcriptText = payload.text.trim();
+      setCustomSourceName(audioFile.name);
+      setCustomSourceOriginal(transcriptText);
+      setNote(transcriptText);
+      setDirty(true);
+      setCompletedTasks([]);
+      setView("transcript");
+      setTranscriptionPhase("done");
+    } catch (error) {
+      setTranscriptionPhase("error");
+      setFileError(error instanceof Error ? error.message : "No se pudo transcribir el audio.");
+    }
   };
 
   const runAnalysis = () => {
     if (!note.trim()) {
-      setFileError("Añade notas o sube un archivo antes de analizar.");
+      setFileError("Añade notas, sube un transcript o transcribe un audio antes de analizar.");
       return;
     }
     setPhase("analyzing");
@@ -228,7 +308,7 @@ export function MeetingDemo() {
   };
 
   const resetNote = () => {
-    const resetValue = uploadedFileName ? uploadedText : sample.note;
+    const resetValue = customSourceOriginal || sample.note;
     setNote(resetValue);
     setAnalysis(analyzeEditedNote(resetValue, sample));
     setDirty(false);
@@ -237,9 +317,12 @@ export function MeetingDemo() {
     setView("overview");
   };
 
-  const clearUploadedFile = () => {
-    setUploadedFileName("");
-    setUploadedText("");
+  const clearCustomSource = () => {
+    setCustomSourceName("");
+    setCustomSourceOriginal("");
+    setTextFileName("");
+    setAudioFile(null);
+    setTranscriptionPhase("idle");
     setNote(sample.note);
     setAnalysis(analyzeEditedNote(sample.note, sample));
     setDirty(false);
@@ -248,12 +331,22 @@ export function MeetingDemo() {
     setView("overview");
   };
 
+  const clearAudioSelection = () => {
+    if (customSourceName === audioFile?.name) {
+      clearCustomSource();
+      return;
+    }
+    setAudioFile(null);
+    setTranscriptionPhase("idle");
+    setFileError("");
+  };
+
   const toggleTask = (taskId: string) => {
     setCompletedTasks((current) => current.includes(taskId) ? current.filter((id) => id !== taskId) : [...current, taskId]);
   };
 
   const copyBrief = async () => {
-    if (dirty || phase === "analyzing") return;
+    if (dirty || isBusy) return;
     const brief = [
       `SYNAPSE — ${sourceTitle}`,
       `Summary: ${analysis.summary}`,
@@ -292,9 +385,25 @@ export function MeetingDemo() {
     { id: "risks", label: "Risks", icon: "!" },
   ];
 
-  const resultTitle = phase === "analyzing" ? "Structuring meeting…" : dirty ? "Ready to analyze" : "Meeting brief ready";
-  const resultStatus = phase === "analyzing" ? "WORKING" : dirty ? "PENDING" : "READY";
-  const resultStatusClass = phase === "analyzing" ? "ready-pill is-processing" : dirty ? "ready-pill is-pending" : "ready-pill";
+  const resultTitle = transcriptionPhase === "transcribing"
+    ? "Transcribing audio…"
+    : phase === "analyzing"
+      ? "Structuring meeting…"
+      : dirty
+        ? "Ready to analyze"
+        : "Meeting brief ready";
+  const resultStatus = transcriptionPhase === "transcribing"
+    ? "TRANSCRIBING"
+    : phase === "analyzing"
+      ? "WORKING"
+      : dirty
+        ? "PENDING"
+        : "READY";
+  const resultStatusClass = transcriptionPhase === "transcribing" || phase === "analyzing"
+    ? "ready-pill is-processing"
+    : dirty
+      ? "ready-pill is-pending"
+      : "ready-pill";
 
   return (
     <div className="demo-app">
@@ -324,8 +433,8 @@ export function MeetingDemo() {
             <strong>Meeting intelligence</strong>
           </div>
           <div className="demo-topbar-actions">
-            <span className="sample-data-pill">LOCAL DEMO</span>
-            <button type="button" className="copy-button" onClick={copyBrief} disabled={dirty || phase === "analyzing"}>
+            <span className="sample-data-pill">LIVE TRANSCRIPTION DEMO</span>
+            <button type="button" className="copy-button" onClick={copyBrief} disabled={dirty || isBusy}>
               {dirty ? "Analyze first" : copied ? "Copied ✓" : "Copy brief"}
             </button>
           </div>
@@ -339,34 +448,73 @@ export function MeetingDemo() {
                 <button
                   key={item.id}
                   type="button"
-                  className={!uploadedFileName && sampleId === item.id ? "source-chip is-active" : "source-chip"}
-                  onClick={() => selectSample(item)}
-                  aria-pressed={!uploadedFileName && sampleId === item.id}
+                  className={!customSourceName && !audioFile && sampleId === item.id ? "source-chip is-active" : "source-chip"}
+                  onClick={() => resetWorkspaceToSample(item)}
+                  aria-pressed={!customSourceName && !audioFile && sampleId === item.id}
                 >
                   <span>{item.label}</span><small>{item.meta}</small>
                 </button>
               ))}
             </div>
 
-            <div className="upload-block">
-              <label className="upload-control">
-                <input
-                  type="file"
-                  accept=".txt,.md,.csv,.json,.srt,.vtt,text/plain,text/csv,application/json"
-                  onChange={handleFileChange}
-                />
-                <span className="upload-icon" aria-hidden="true">↑</span>
-                <span className="upload-copy">
-                  <strong>Subir transcript o notas</strong>
-                  <small>TXT, MD, CSV, JSON, SRT o VTT · máximo 1 MB · lectura local</small>
-                </span>
-              </label>
-              {uploadedFileName && (
-                <div className="upload-file-row">
-                  <span title={uploadedFileName}>Archivo: {uploadedFileName}</span>
-                  <button type="button" onClick={clearUploadedFile}>Quitar</button>
-                </div>
-              )}
+            <div className="input-methods">
+              <div className="upload-block">
+                <label className="upload-control">
+                  <input
+                    type="file"
+                    accept=".txt,.md,.csv,.json,.srt,.vtt,text/plain,text/csv,application/json"
+                    onChange={handleTextFileChange}
+                  />
+                  <span className="upload-icon" aria-hidden="true">↑</span>
+                  <span className="upload-copy">
+                    <strong>Subir transcript o notas</strong>
+                    <small>TXT, MD, CSV, JSON, SRT o VTT · máximo 1 MB · lectura local</small>
+                  </span>
+                </label>
+                {textFileName && (
+                  <div className="upload-file-row">
+                    <span title={textFileName}>Texto: {textFileName}</span>
+                    <button type="button" onClick={clearCustomSource}>Quitar</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="upload-block audio-upload-block">
+                <label className="upload-control audio-upload-control">
+                  <input
+                    type="file"
+                    accept=".mp3,.m4a,.wav,.webm,.ogg,.mp4,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg"
+                    onChange={handleAudioFileChange}
+                  />
+                  <span className="upload-icon audio-upload-icon" aria-hidden="true">◉</span>
+                  <span className="upload-copy">
+                    <strong>Subir audio de reunión</strong>
+                    <small>MP3, M4A, WAV, WEBM, OGG o MP4 · máximo 4 MB</small>
+                  </span>
+                </label>
+
+                {audioFile && (
+                  <div className="audio-file-card">
+                    <div>
+                      <span className="audio-file-kicker">AUDIO READY</span>
+                      <strong title={audioFile.name}>{audioFile.name}</strong>
+                      <small>{formatBytes(audioFile.size)} · {transcriptionPhase === "done" ? "Transcript ready" : "Ready to transcribe"}</small>
+                    </div>
+                    <div className="audio-file-actions">
+                      <button type="button" className="audio-remove-button" onClick={clearAudioSelection} disabled={transcriptionPhase === "transcribing"}>Quitar</button>
+                      <button
+                        type="button"
+                        className="transcribe-button"
+                        onClick={transcribeAudio}
+                        disabled={transcriptionPhase === "transcribing"}
+                      >
+                        {transcriptionPhase === "transcribing" ? "Transcribiendo…" : transcriptionPhase === "done" ? "Transcribir otra vez" : "Transcribir audio"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {fileError && <p className="upload-error" role="alert">{fileError}</p>}
             </div>
 
@@ -383,18 +531,19 @@ export function MeetingDemo() {
               />
             </label>
 
+            {transcriptionPhase === "done" && <p className="transcription-success">Audio transcrito. Revisa el texto y después analiza la reunión.</p>}
             {dirty && <p className="pending-note">Hay cambios sin analizar. Ejecuta la reunión para actualizar el brief.</p>}
 
             <div className="source-actions">
-              <button type="button" className="reset-button" onClick={resetNote}>Reset</button>
-              <button type="button" className="analyze-button" onClick={runAnalysis} disabled={phase === "analyzing"}>
+              <button type="button" className="reset-button" onClick={resetNote} disabled={isBusy}>Reset</button>
+              <button type="button" className="analyze-button" onClick={runAnalysis} disabled={isBusy}>
                 {phase === "analyzing" ? "Analizando…" : "Analizar reunión"}<span aria-hidden="true">→</span>
               </button>
             </div>
-            <p className="demo-disclaimer">El archivo se procesa en el navegador. La demo no llama a un modelo, no sube el archivo a un servidor y no almacena su contenido.</p>
+            <p className="demo-disclaimer">Los archivos de texto se leen en el navegador. El audio se envía a la API de transcripción y no se guarda en una base de datos propia de esta demo.</p>
           </section>
 
-          <section className="insight-column" aria-live="polite" aria-busy={phase === "analyzing"}>
+          <section className="insight-column" aria-live="polite" aria-busy={isBusy}>
             <div className="insight-summary-bar">
               <div><span>RESULT</span><strong>{resultTitle}</strong></div>
               <span className={resultStatusClass}>{resultStatus}</span>
@@ -409,7 +558,13 @@ export function MeetingDemo() {
             </div>
 
             <div className="result-content">
-              {phase === "analyzing" ? (
+              {transcriptionPhase === "transcribing" ? (
+                <div className="processing-state">
+                  <div className="processing-orb" />
+                  <strong>Transcribiendo el audio</strong>
+                  <span>Convirtiendo voz en texto para incorporarlo al workspace…</span>
+                </div>
+              ) : phase === "analyzing" ? (
                 <div className="processing-state">
                   <div className="processing-orb" />
                   <strong>Organizando la reunión</strong>
@@ -419,7 +574,7 @@ export function MeetingDemo() {
                 <div className="pending-state">
                   <span>INPUT READY</span>
                   <strong>Tu contenido está listo.</strong>
-                  <p>Haz clic en “Analizar reunión” para regenerar el resumen, decisiones, tareas y riesgos con el texto actual.</p>
+                  <p>Revisa el transcript y haz clic en “Analizar reunión” para regenerar el resumen, decisiones, tareas y riesgos.</p>
                 </div>
               ) : view === "overview" ? (
                 <div className="overview-tab">

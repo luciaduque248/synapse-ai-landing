@@ -1,11 +1,13 @@
+import Image from "next/image";
+import brainPng from "@/components/cerebro_3d_neon_transparente.png";
 import { MeetingDemo } from "@/components/meeting-demo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const features = [
-  ["01", "Capture", "Pega una transcripción, edita notas o sube un archivo de texto para probar el flujo con tu propio contenido."],
-  ["02", "Understand", "Separa decisiones, compromisos, responsables, fechas y posibles bloqueos."],
-  ["03", "Organize", "Convierte lo hablado en un brief claro con tareas y próximos pasos."],
-  ["04", "Follow up", "Mantiene decisiones y acciones conectadas para que nada se pierda después de la reunión."],
+  ["01", "Capture", "Pega una transcripción, edita notas o sube un archivo de texto o audio para probar el flujo con tu propio contenido."],
+  ["02", "Transcribe", "Cuando subes audio, SYNAPSE lo convierte en texto antes de pasar al análisis de la reunión."],
+  ["03", "Understand", "Separa decisiones, compromisos, responsables, fechas y posibles bloqueos."],
+  ["04", "Follow up", "Convierte lo hablado en un brief claro con tareas, riesgos y próximos pasos."],
 ];
 
 const faqs = [
@@ -14,12 +16,16 @@ const faqs = [
     "No. Es un concepto ficticio de portafolio diseñado para demostrar UX/UI y frontend aplicado a meeting intelligence.",
   ],
   [
-    "¿La demo usa una IA real?",
-    "No. La demo funciona de forma local con lógica determinística. No envía ni almacena información.",
+    "¿La transcripción de audio sí es real?",
+    "Sí. Los clips de audio compatibles se envían desde la API del proyecto a un servicio real de speech-to-text. El transcript vuelve al workspace para que puedas revisarlo antes de analizar la reunión.",
   ],
   [
     "¿Qué archivos puedo subir?",
-    "La demo acepta archivos de texto TXT, MD, CSV, JSON, SRT y VTT de hasta 1 MB. PDF, DOCX y audio requerirían un parser o servicio de transcripción real, por eso no se simulan.",
+    "Para texto: TXT, MD, CSV, JSON, SRT y VTT de hasta 1 MB. Para audio: MP3, M4A, WAV, WEBM, OGG o MP4 de hasta 4 MB en esta demo desplegada en Vercel.",
+  ],
+  [
+    "¿La app guarda mi reunión?",
+    "No hay base de datos en esta demo. Los transcripts de texto se leen en el navegador. El audio sí sale del navegador para ser transcrito, pero SYNAPSE no lo persiste en una base de datos propia.",
   ],
   [
     "¿Los datos del dashboard son reales?",
@@ -60,7 +66,7 @@ export default function Home() {
             <div className="hero-eyebrow"><span>✦</span> AI MEETING INTELLIGENCE · PORTFOLIO CONCEPT</div>
             <h1>Cada reunión termina con <span>decisiones y tareas claras.</span></h1>
             <p>
-              SYNAPSE convierte una reunión en un resumen accionable: qué se decidió, quién hace qué, para cuándo y qué puede bloquear el siguiente paso.
+              SYNAPSE recibe notas, transcripts o audio, convierte la conversación en texto y la organiza en decisiones, responsables, tareas, fechas y riesgos.
             </p>
 
             <div className="hero-actions">
@@ -69,38 +75,22 @@ export default function Home() {
             </div>
 
             <div className="hero-proof">
-              <span>Transcript</span><span>Summary</span><span>Decisions</span><span>Tasks</span>
+              <span>Audio</span><span>Transcript</span><span>Decisions</span><span>Tasks</span>
             </div>
           </div>
 
           <div className="brain-visual" aria-label="SYNAPSE transforma conversación en decisiones y tareas">
             <div className="brain-orbit brain-orbit-a" />
             <div className="brain-orbit brain-orbit-b" />
-            <svg className="brain-svg" viewBox="0 0 430 320" role="img" aria-label="Red neuronal conceptual">
-              <defs>
-                <linearGradient id="brainStroke" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#19d6ff" />
-                  <stop offset="55%" stopColor="#6d72ff" />
-                  <stop offset="100%" stopColor="#ef4cff" />
-                </linearGradient>
-                <filter id="glow"><feGaussianBlur stdDeviation="3.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              </defs>
-              <path className="brain-outline" d="M82 118C72 78 103 45 143 47c17-25 58-29 80-6 25-19 67-4 72 25 39-1 69 34 57 72 28 17 35 57 12 83-12 14-28 22-45 23-8 35-42 55-75 43-20 24-59 28-83 8-28 12-61-3-70-33-35-3-58-38-42-69-18-29-4-65 33-75Z" />
-              {[
-                [88,72,132,50],[132,50,180,62],[180,62,220,44],[220,44,260,72],[260,72,300,58],[300,58,344,86],
-                [88,72,116,108],[132,50,160,122],[180,62,205,102],[220,44,252,120],[260,72,296,106],[300,58,356,126],
-                [70,118,116,108],[116,108,160,122],[160,122,205,102],[205,102,252,120],[252,120,296,106],[296,106,356,126],
-                [70,118,82,168],[116,108,128,158],[160,122,176,174],[205,102,224,154],[252,120,270,170],[296,106,318,158],[356,126,350,194],
-                [82,168,128,158],[128,158,176,174],[176,174,224,154],[224,154,270,170],[270,170,318,158],[318,158,350,194],
-                [82,168,112,216],[128,158,158,204],[176,174,204,220],[224,154,250,206],[270,170,294,220],[318,158,324,250],
-                [112,216,158,204],[158,204,204,220],[204,220,250,206],[250,206,294,220],[294,220,324,250],
-              ].map((l, i) => <line key={i} x1={l[0]} y1={l[1]} x2={l[2]} y2={l[3]} className="brain-link" />)}
-              {[[88,72],[132,50],[180,62],[220,44],[260,72],[300,58],[344,86],[70,118],[116,108],[160,122],[205,102],[252,120],[296,106],[356,126],[82,168],[128,158],[176,174],[224,154],[270,170],[318,158],[350,194],[112,216],[158,204],[204,220],[250,206],[294,220],[324,250]].map(([cx,cy], i) => (
-                <g key={i} filter={i % 5 === 0 ? "url(#glow)" : undefined}><circle cx={cx} cy={cy} r={i % 5 === 0 ? 5 : 3.1} className="brain-node" /></g>
-              ))}
-            </svg>
+            <Image
+              src={brainPng}
+              alt="Cerebro 3D de SYNAPSE AI representando conexiones entre conversación, decisiones y tareas"
+              className="brain-asset"
+              priority
+              sizes="(max-width: 980px) 82vw, 500px"
+            />
             <div className="brain-tag brain-tag--meetings"><span>INPUT</span><strong>Meeting audio</strong></div>
-            <div className="brain-tag brain-tag--notes"><span>INPUT</span><strong>Transcript file</strong></div>
+            <div className="brain-tag brain-tag--notes"><span>INPUT</span><strong>Transcript + notes</strong></div>
             <div className="brain-tag brain-tag--decision"><span>OUTPUT</span><strong>Decisions</strong></div>
             <div className="brain-tag brain-tag--actions"><span>OUTPUT</span><strong>Tasks + owners</strong></div>
             <div className="brain-core-label"><span>SYNAPSE CORE</span><strong>Meeting → execution</strong></div>
@@ -110,8 +100,8 @@ export default function Home() {
 
       <section id="product" className="value-strip">
         <div className="site-width value-strip-inner">
-          <span>BEFORE</span><b>45 min meeting</b><i>→</i>
-          <span>SYNAPSE</span><b>Meeting intelligence</b><i>→</i>
+          <span>BEFORE</span><b>Meeting audio / transcript</b><i>→</i>
+          <span>SYNAPSE</span><b>Transcribe + understand</b><i>→</i>
           <span>AFTER</span><b>Summary · Decisions · Tasks · Risks</b>
         </div>
       </section>
@@ -140,7 +130,7 @@ export default function Home() {
             <h2>Prueba el flujo con una reunión propia.</h2>
           </div>
           <p>
-            Usa un ejemplo, pega tus notas o sube un transcript de texto. Después analiza, navega por decisiones, tareas y riesgos, marca tareas como completadas y copia el brief.
+            Usa un ejemplo, pega tus notas, sube un transcript o carga un audio corto. SYNAPSE transcribe el audio, te deja revisar el texto y después genera el brief operativo.
           </p>
         </div>
         <div className="site-width product-demo-frame"><MeetingDemo /></div>
@@ -190,7 +180,7 @@ export default function Home() {
         <div className="final-glow" />
         <div className="site-width final-inner">
           <div className="final-brain-mark" aria-hidden="true">S</div>
-          <div><span>MEETING → DECISION → ACTION</span><h2>Que la próxima reunión termine con trabajo claro.</h2><p>Demo conceptual y local. Sin cuenta, sin almacenamiento y sin llamadas a IA externa.</p></div>
+          <div><span>MEETING → TRANSCRIPT → DECISION → ACTION</span><h2>Que la próxima reunión termine con trabajo claro.</h2><p>Sube audio o texto, revisa el transcript y conviértelo en seguimiento accionable.</p></div>
           <a href="#demo" className="primary-action">Probar reunión <span>→</span></a>
         </div>
       </section>
