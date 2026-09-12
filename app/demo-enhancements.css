@@ -1,0 +1,17 @@
+.copy-button:disabled { opacity: .48; cursor: not-allowed; }
+.upload-control:has(input:focus-visible) { outline: 2px solid #9c94ff; outline-offset: 3px; }
+.pending-state {
+  min-height: 390px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px;
+  text-align: center;
+}
+.pending-state > span { color: #d8c17f; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.pending-state strong { margin-top: 10px; font-size: 14px; }
+.pending-state p { max-width: 390px; margin: 9px 0 0; color: var(--muted); font-size: 9px; line-height: 1.6; }
+html[data-theme="light"] .pending-state > span { color: #8c7027; }
+html[data-theme="light"] .pending-note { color: #806c35; }
+html[data-theme="light"] .upload-error { color: #b13c47; }

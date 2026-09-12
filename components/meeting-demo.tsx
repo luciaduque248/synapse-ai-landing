@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { ChangeEvent, useMemo, useState } from "react";
 
 type Task = { id: string; title: string; owner: string; timing: string };
 type MeetingSample = {
@@ -16,8 +16,10 @@ type MeetingSample = {
   checkpoint: string;
 };
 type View = "overview" | "transcript" | "decisions" | "tasks" | "risks";
-
 type Analysis = Pick<MeetingSample, "summary" | "decisions" | "tasks" | "risks" | "checkpoint">;
+
+const ACCEPTED_EXTENSIONS = ["txt", "md", "csv", "json", "srt", "vtt"];
+const MAX_FILE_BYTES = 1024 * 1024;
 
 const samples: MeetingSample[] = [
   {
@@ -105,20 +107,20 @@ function analyzeEditedNote(note: string, sample: MeetingSample): Analysis {
 
   const summarySource = sentences.slice(0, 2).join(". ");
   const decisions = sentences
-    .filter((sentence) => /decid|queda|mant|release|lanzamiento|prioridad|siguiente paso|aprob/i.test(sentence))
+    .filter((sentence) => /decid|queda|mant|release|lanzamiento|prioridad|siguiente paso|aprob|acord/i.test(sentence))
     .slice(0, 3);
   const risks = sentences
-    .filter((sentence) => /si |bloque|pendiente|falta|riesg|depend|condicion/i.test(sentence))
+    .filter((sentence) => /si |bloque|pendiente|falta|riesg|depend|condicion|problema|impide/i.test(sentence))
     .slice(0, 3);
 
-  const ownerNames = ["Sara", "Diego", "Design", "Diseño", "QA", "Paula", "Marco", "Andrés", "Frontend", "Producto", "Seguridad"];
-  const taskSentences = sentences.filter((sentence) => /cierra|conecta|revis|prepara|coordina|valida|reproduce|asigna|debe|hacer|completa|entrega/i.test(sentence));
-  const tasks = taskSentences.slice(0, 5).map((sentence, index) => {
+  const ownerNames = ["Sara", "Diego", "Design", "Diseño", "QA", "Paula", "Marco", "Andrés", "Frontend", "Producto", "Seguridad", "Marketing", "Ventas", "Operaciones"];
+  const taskSentences = sentences.filter((sentence) => /cierra|conecta|revis|prepara|coordina|valida|reproduce|asigna|debe|hacer|completa|entrega|envía|envia|actualiza|corrige|confirma/i.test(sentence));
+  const tasks = taskSentences.slice(0, 6).map((sentence, index) => {
     const owner = ownerNames.find((name) => new RegExp(`\\b${name}\\b`, "i").test(sentence)) ?? "Por asignar";
-    const timingMatch = sentence.match(/hoy|mañana|jueves|viernes|esta semana|antes de [^,.]+|ahora/i);
+    const timingMatch = sentence.match(/hoy|mañana|jueves|viernes|lunes|martes|miércoles|miercoles|esta semana|antes de [^,.]+|ahora|próxima semana|proxima semana/i);
     return {
       id: `custom-${index}`,
-      title: sentence.length > 72 ? `${sentence.slice(0, 69)}…` : sentence,
+      title: sentence.length > 82 ? `${sentence.slice(0, 79)}…` : sentence,
       owner,
       timing: timingMatch?.[0] ?? "Por definir",
     };
@@ -126,11 +128,17 @@ function analyzeEditedNote(note: string, sample: MeetingSample): Analysis {
 
   return {
     summary: summarySource ? `${summarySource}.` : "Añade contexto de reunión para generar el brief local.",
-    decisions: decisions.length ? decisions : ["No se detectó una decisión explícita en el texto editado."],
+    decisions: decisions.length ? decisions : ["No se detectó una decisión explícita en el texto."],
     tasks: tasks.length ? tasks : [{ id: "custom-empty", title: "Revisar contexto y asignar próximos pasos", owner: "Por asignar", timing: "Por definir" }],
-    risks: risks.length ? risks : ["No se detectaron bloqueos explícitos en el texto editado."],
-    checkpoint: sample.checkpoint,
+    risks: risks.length ? risks : ["No se detectaron bloqueos explícitos en el texto."],
+    checkpoint: "Por definir · Añade el próximo checkpoint en las notas",
   };
+}
+
+function buildImportedTranscript(note: string) {
+  const byLine = note.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const source = byLine.length > 1 ? byLine : note.split(/(?<=[.!?])\s+/).map((line) => line.trim()).filter(Boolean);
+  return source.slice(0, 14).map((text, index) => ({ speaker: "Imported", time: `0${index + 1}`.slice(-2), text }));
 }
 
 export function MeetingDemo() {
@@ -141,32 +149,101 @@ export function MeetingDemo() {
   const [phase, setPhase] = useState<"ready" | "analyzing">("ready");
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [uploadedText, setUploadedText] = useState("");
+  const [fileError, setFileError] = useState("");
+  const [dirty, setDirty] = useState(false);
 
   const sample = useMemo(() => samples.find((item) => item.id === sampleId) ?? samples[0], [sampleId]);
+  const sourceTitle = uploadedFileName || sample.label;
+  const transcript = useMemo(
+    () => uploadedFileName || note !== sample.note ? buildImportedTranscript(note) : sample.transcript,
+    [note, sample, uploadedFileName],
+  );
 
   const selectSample = (next: MeetingSample) => {
     setSampleId(next.id);
     setNote(next.note);
     setAnalysis(analyzeEditedNote(next.note, next));
+    setUploadedFileName("");
+    setUploadedText("");
+    setFileError("");
+    setDirty(false);
     setCompletedTasks([]);
     setView("overview");
     setCopied(false);
   };
 
+  const loadFile = async (file: File) => {
+    setFileError("");
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!ACCEPTED_EXTENSIONS.includes(extension)) {
+      setFileError("Formato no compatible. Usa TXT, MD, CSV, JSON, SRT o VTT.");
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError("El archivo supera 1 MB. Usa un transcript más pequeño para esta demo local.");
+      return;
+    }
+
+    try {
+      const text = (await file.text()).trim();
+      if (!text) {
+        setFileError("El archivo está vacío o no contiene texto legible.");
+        return;
+      }
+      setUploadedFileName(file.name);
+      setUploadedText(text);
+      setNote(text);
+      setDirty(true);
+      setCompletedTasks([]);
+      setCopied(false);
+      setView("overview");
+    } catch {
+      setFileError("No se pudo leer el archivo localmente.");
+    }
+  };
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await loadFile(file);
+    event.target.value = "";
+  };
+
   const runAnalysis = () => {
+    if (!note.trim()) {
+      setFileError("Añade notas o sube un archivo antes de analizar.");
+      return;
+    }
     setPhase("analyzing");
+    setFileError("");
     setCopied(false);
     window.setTimeout(() => {
       setAnalysis(analyzeEditedNote(note, sample));
       setCompletedTasks([]);
       setView("overview");
+      setDirty(false);
       setPhase("ready");
     }, 700);
   };
 
   const resetNote = () => {
+    const resetValue = uploadedFileName ? uploadedText : sample.note;
+    setNote(resetValue);
+    setAnalysis(analyzeEditedNote(resetValue, sample));
+    setDirty(false);
+    setFileError("");
+    setCompletedTasks([]);
+    setView("overview");
+  };
+
+  const clearUploadedFile = () => {
+    setUploadedFileName("");
+    setUploadedText("");
     setNote(sample.note);
     setAnalysis(analyzeEditedNote(sample.note, sample));
+    setDirty(false);
+    setFileError("");
     setCompletedTasks([]);
     setView("overview");
   };
@@ -176,8 +253,9 @@ export function MeetingDemo() {
   };
 
   const copyBrief = async () => {
+    if (dirty || phase === "analyzing") return;
     const brief = [
-      `SYNAPSE — ${sample.label}`,
+      `SYNAPSE — ${sourceTitle}`,
       `Summary: ${analysis.summary}`,
       "Decisions:",
       ...analysis.decisions.map((item) => `- ${item}`),
@@ -193,7 +271,16 @@ export function MeetingDemo() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      setCopied(false);
+      const textarea = document.createElement("textarea");
+      textarea.value = brief;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
     }
   };
 
@@ -204,6 +291,10 @@ export function MeetingDemo() {
     { id: "tasks", label: "Tasks", icon: "✓" },
     { id: "risks", label: "Risks", icon: "!" },
   ];
+
+  const resultTitle = phase === "analyzing" ? "Structuring meeting…" : dirty ? "Ready to analyze" : "Meeting brief ready";
+  const resultStatus = phase === "analyzing" ? "WORKING" : dirty ? "PENDING" : "READY";
+  const resultStatusClass = phase === "analyzing" ? "ready-pill is-processing" : dirty ? "ready-pill is-pending" : "ready-pill";
 
   return (
     <div className="demo-app">
@@ -229,12 +320,14 @@ export function MeetingDemo() {
       <div className="demo-workspace">
         <div className="demo-topbar">
           <div>
-            <span className="demo-breadcrumb">Workspace / {sample.label}</span>
+            <span className="demo-breadcrumb">Workspace / {sourceTitle}</span>
             <strong>Meeting intelligence</strong>
           </div>
           <div className="demo-topbar-actions">
             <span className="sample-data-pill">LOCAL DEMO</span>
-            <button type="button" className="copy-button" onClick={copyBrief}>{copied ? "Copied ✓" : "Copy brief"}</button>
+            <button type="button" className="copy-button" onClick={copyBrief} disabled={dirty || phase === "analyzing"}>
+              {dirty ? "Analyze first" : copied ? "Copied ✓" : "Copy brief"}
+            </button>
           </div>
         </div>
 
@@ -246,19 +339,51 @@ export function MeetingDemo() {
                 <button
                   key={item.id}
                   type="button"
-                  className={sampleId === item.id ? "source-chip is-active" : "source-chip"}
+                  className={!uploadedFileName && sampleId === item.id ? "source-chip is-active" : "source-chip"}
                   onClick={() => selectSample(item)}
-                  aria-pressed={sampleId === item.id}
+                  aria-pressed={!uploadedFileName && sampleId === item.id}
                 >
                   <span>{item.label}</span><small>{item.meta}</small>
                 </button>
               ))}
             </div>
 
+            <div className="upload-block">
+              <label className="upload-control">
+                <input
+                  type="file"
+                  accept=".txt,.md,.csv,.json,.srt,.vtt,text/plain,text/csv,application/json"
+                  onChange={handleFileChange}
+                />
+                <span className="upload-icon" aria-hidden="true">↑</span>
+                <span className="upload-copy">
+                  <strong>Subir transcript o notas</strong>
+                  <small>TXT, MD, CSV, JSON, SRT o VTT · máximo 1 MB · lectura local</small>
+                </span>
+              </label>
+              {uploadedFileName && (
+                <div className="upload-file-row">
+                  <span title={uploadedFileName}>Archivo: {uploadedFileName}</span>
+                  <button type="button" onClick={clearUploadedFile}>Quitar</button>
+                </div>
+              )}
+              {fileError && <p className="upload-error" role="alert">{fileError}</p>}
+            </div>
+
             <label className="note-editor">
               <span>Transcript / notes</span>
-              <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={10} />
+              <textarea
+                value={note}
+                onChange={(event) => {
+                  setNote(event.target.value);
+                  setDirty(true);
+                  setCopied(false);
+                }}
+                rows={10}
+              />
             </label>
+
+            {dirty && <p className="pending-note">Hay cambios sin analizar. Ejecuta la reunión para actualizar el brief.</p>}
 
             <div className="source-actions">
               <button type="button" className="reset-button" onClick={resetNote}>Reset</button>
@@ -266,13 +391,13 @@ export function MeetingDemo() {
                 {phase === "analyzing" ? "Analizando…" : "Analizar reunión"}<span aria-hidden="true">→</span>
               </button>
             </div>
-            <p className="demo-disclaimer">La demo usa lógica local y sample data. No hay llamada a un modelo ni almacenamiento.</p>
+            <p className="demo-disclaimer">El archivo se procesa en el navegador. La demo no llama a un modelo, no sube el archivo a un servidor y no almacena su contenido.</p>
           </section>
 
           <section className="insight-column" aria-live="polite" aria-busy={phase === "analyzing"}>
             <div className="insight-summary-bar">
-              <div><span>RESULT</span><strong>{phase === "analyzing" ? "Structuring meeting…" : "Meeting brief ready"}</strong></div>
-              <span className={phase === "analyzing" ? "ready-pill is-processing" : "ready-pill"}>{phase === "analyzing" ? "WORKING" : "READY"}</span>
+              <div><span>RESULT</span><strong>{resultTitle}</strong></div>
+              <span className={resultStatusClass}>{resultStatus}</span>
             </div>
 
             <div className="result-tabs" role="tablist" aria-label="Resultados de la reunión">
@@ -290,6 +415,12 @@ export function MeetingDemo() {
                   <strong>Organizando la reunión</strong>
                   <span>Detectando decisiones, acciones, owners y riesgos…</span>
                 </div>
+              ) : dirty ? (
+                <div className="pending-state">
+                  <span>INPUT READY</span>
+                  <strong>Tu contenido está listo.</strong>
+                  <p>Haz clic en “Analizar reunión” para regenerar el resumen, decisiones, tareas y riesgos con el texto actual.</p>
+                </div>
               ) : view === "overview" ? (
                 <div className="overview-tab">
                   <article className="summary-card"><span>MEETING SUMMARY</span><p>{analysis.summary}</p></article>
@@ -303,8 +434,7 @@ export function MeetingDemo() {
                 </div>
               ) : view === "transcript" ? (
                 <div className="transcript-list">
-                  {sample.transcript.map((line) => <article key={`${line.time}-${line.speaker}`}><span>{line.time}</span><div><strong>{line.speaker}</strong><p>{line.text}</p></div></article>)}
-                  {note !== sample.note && <p className="custom-note-hint">El transcript visual permanece como sample; el análisis superior sí usa el texto que editaste.</p>}
+                  {transcript.map((line) => <article key={`${line.time}-${line.speaker}-${line.text}`}><span>{line.time}</span><div><strong>{line.speaker}</strong><p>{line.text}</p></div></article>)}
                 </div>
               ) : view === "decisions" ? (
                 <div className="decision-list">{analysis.decisions.map((item, index) => <article key={`${index}-${item}`}><span>0{index+1}</span><div><b>Decision</b><p>{item}</p></div><i>✓</i></article>)}</div>

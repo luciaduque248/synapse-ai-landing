@@ -1,7 +1,8 @@
 import { MeetingDemo } from "@/components/meeting-demo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const features = [
-  ["01", "Capture", "Recibe una transcripción, notas de reunión o un resumen pegado por el usuario."],
+  ["01", "Capture", "Pega una transcripción, edita notas o sube un archivo de texto para probar el flujo con tu propio contenido."],
   ["02", "Understand", "Separa decisiones, compromisos, responsables, fechas y posibles bloqueos."],
   ["03", "Organize", "Convierte lo hablado en un brief claro con tareas y próximos pasos."],
   ["04", "Follow up", "Mantiene decisiones y acciones conectadas para que nada se pierda después de la reunión."],
@@ -14,7 +15,11 @@ const faqs = [
   ],
   [
     "¿La demo usa una IA real?",
-    "No. La demo funciona de forma local con lógica determinística y ejemplos de muestra. No envía ni almacena información.",
+    "No. La demo funciona de forma local con lógica determinística. No envía ni almacena información.",
+  ],
+  [
+    "¿Qué archivos puedo subir?",
+    "La demo acepta archivos de texto TXT, MD, CSV, JSON, SRT y VTT de hasta 1 MB. PDF, DOCX y audio requerirían un parser o servicio de transcripción real, por eso no se simulan.",
   ],
   [
     "¿Los datos del dashboard son reales?",
@@ -39,7 +44,10 @@ export default function Home() {
             <a href="#faq">FAQ</a>
           </nav>
 
-          <a href="#demo" className="header-cta">Probar reunión <span>→</span></a>
+          <div className="header-actions">
+            <ThemeToggle />
+            <a href="#demo" className="header-cta">Probar reunión <span>→</span></a>
+          </div>
         </div>
       </header>
 
@@ -92,7 +100,7 @@ export default function Home() {
               ))}
             </svg>
             <div className="brain-tag brain-tag--meetings"><span>INPUT</span><strong>Meeting audio</strong></div>
-            <div className="brain-tag brain-tag--notes"><span>INPUT</span><strong>Transcript + notes</strong></div>
+            <div className="brain-tag brain-tag--notes"><span>INPUT</span><strong>Transcript file</strong></div>
             <div className="brain-tag brain-tag--decision"><span>OUTPUT</span><strong>Decisions</strong></div>
             <div className="brain-tag brain-tag--actions"><span>OUTPUT</span><strong>Tasks + owners</strong></div>
             <div className="brain-core-label"><span>SYNAPSE CORE</span><strong>Meeting → execution</strong></div>
@@ -129,10 +137,10 @@ export default function Home() {
         <div className="site-width section-heading demo-heading">
           <div>
             <span>INTERACTIVE MEETING DEMO</span>
-            <h2>Prueba el flujo completo de una reunión.</h2>
+            <h2>Prueba el flujo con una reunión propia.</h2>
           </div>
           <p>
-            Cambia de reunión, edita el contexto, ejecuta el análisis local, navega por transcript, decisiones, tareas y riesgos, marca tareas como completadas y copia el brief.
+            Usa un ejemplo, pega tus notas o sube un transcript de texto. Después analiza, navega por decisiones, tareas y riesgos, marca tareas como completadas y copia el brief.
           </p>
         </div>
         <div className="site-width product-demo-frame"><MeetingDemo /></div>
