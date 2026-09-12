@@ -1,5 +1,6 @@
 "use client";
 
+import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
@@ -28,6 +29,7 @@ export function ThemeToggle() {
   };
 
   const nextLabel = theme === "dark" ? "modo claro" : "modo oscuro";
+  const Icon = theme === "dark" ? Sun : Moon;
 
   return (
     <button
@@ -37,7 +39,7 @@ export function ThemeToggle() {
       aria-label={`Cambiar a ${nextLabel}`}
       title={`Cambiar a ${nextLabel}`}
     >
-      <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+      <Icon size={15} aria-hidden="true" />
       <b>{theme === "dark" ? "Light" : "Dark"}</b>
     </button>
   );

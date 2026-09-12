@@ -3,6 +3,7 @@ import "./globals.css";
 import "./theme.css";
 import "./demo-enhancements.css";
 import "./product-enhancements.css";
+import "./workspace-redesign.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://synapse-ai-landing-nine.vercel.app"),
