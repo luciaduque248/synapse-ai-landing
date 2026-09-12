@@ -3,16 +3,18 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://synapse-ai-landing-nine.vercel.app"),
-  title: "SYNAPSE AI — AI Productivity SaaS Concept",
+  title: "SYNAPSE AI — Turn conversations into execution",
   description:
-    "Landing page conceptual para un SaaS B2B de productividad con IA, enfocada en UX/UI, frontend responsive, product storytelling y conversión a trial.",
+    "Conceptual B2B AI productivity landing page that transforms meetings, notes, chats and emails into decisions, tasks, owners, deadlines and next steps.",
   applicationName: "SYNAPSE AI",
   authors: [{ name: "Sara Duque" }],
   creator: "Sara Duque",
   keywords: [
-    "SaaS landing page",
     "AI productivity",
+    "meeting intelligence",
     "B2B SaaS",
+    "decision tracking",
+    "task extraction",
     "UX/UI",
     "frontend",
     "Next.js",
@@ -22,9 +24,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "SYNAPSE AI — AI Productivity SaaS Concept",
+    title: "SYNAPSE AI — Turn conversations into execution",
     description:
-      "Concepto product-led para convertir conversaciones, decisiones y follow-ups en trabajo accionable.",
+      "Concept product for turning team context into decisions, tasks, owners, risks and next steps.",
     url: "/",
     siteName: "SYNAPSE AI",
     locale: "es_CO",
@@ -32,9 +34,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNAPSE AI — AI Productivity SaaS Concept",
+    title: "SYNAPSE AI — Turn conversations into execution",
     description:
-      "Caso de portafolio B2B SaaS enfocado en UX/UI, frontend e interacción product-led.",
+      "B2B AI productivity portfolio concept focused on context, decisions and execution.",
   },
 };
 

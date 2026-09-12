@@ -1,42 +1,26 @@
+import { NeuralBrain } from "@/components/neural-brain";
 import { SynapseDemo } from "@/components/synapse-demo";
+
+const features = [
+  ["Capture", "Reúne contexto de reuniones, notas, chats y correos en un mismo flujo."],
+  ["Distill", "Separa decisiones, tareas, responsables, fechas y bloqueos del ruido."],
+  ["Assign", "Convierte cada siguiente paso en una acción con owner y timing visibles."],
+  ["Track", "Mantiene decisiones y acciones conectadas para que el equipo no pierda contexto."],
+];
 
 const faqItems = [
   [
     "¿SYNAPSE AI es un producto real?",
-    "No. Es un concepto ficticio de portafolio creado para demostrar UX/UI, frontend y estrategia de conversión para un SaaS B2B de productividad con IA.",
+    "No. Es un concepto ficticio de portafolio creado para demostrar UX/UI, frontend e interacción para un SaaS B2B de productividad con IA.",
   ],
   [
-    "¿El demo procesa las notas con IA?",
-    "No. La demostración es local y utiliza ejemplos predefinidos. No envía texto a un modelo ni almacena información.",
+    "¿El demo usa inteligencia artificial real?",
+    "No. La experiencia es una simulación local con salidas predefinidas. No envía información a un modelo ni almacena datos.",
   ],
   [
-    "¿Las integraciones ya existen?",
-    "No. Se muestran como una arquitectura conceptual de producto, no como integraciones comerciales activas.",
+    "¿Las métricas del dashboard son reales?",
+    "No. Cualquier cifra visible dentro del workspace está marcada como sample data y existe únicamente para representar la interfaz del producto.",
   ],
-];
-
-const workflow = [
-  {
-    number: "01",
-    title: "Captura el contexto",
-    copy: "Una reunión, una nota o un hilo entran al mismo espacio de trabajo.",
-  },
-  {
-    number: "02",
-    title: "Separa lo importante",
-    copy: "Decisiones y próximos pasos quedan diferenciados del resto de la conversación.",
-  },
-  {
-    number: "03",
-    title: "Deja el trabajo visible",
-    copy: "Cada acción conserva owner, timing y relación con la decisión que la originó.",
-  },
-];
-
-const useCases = [
-  ["Product", "Roadmap, discovery, decisiones y handoffs."],
-  ["Sales", "Compromisos, requisitos y próximos pasos."],
-  ["Operations", "Bloqueos, acuerdos y seguimiento operativo."],
 ];
 
 export default function Home() {
@@ -46,153 +30,164 @@ export default function Home() {
         <div className="site-width header-inner">
           <a href="#top" className="brand" aria-label="SYNAPSE AI, inicio">
             <span className="brand-mark" aria-hidden="true">S</span>
-            <span>SYNAPSE AI</span>
+            <span><b>SYNAPSE</b><small>AI WORKFLOW</small></span>
           </a>
 
           <nav className="desktop-nav" aria-label="Navegación principal">
-            <a href="#system">Sistema</a>
+            <a href="#product">Producto</a>
+            <a href="#how">Cómo funciona</a>
+            <a href="#demo">Demo</a>
             <a href="#teams">Equipos</a>
-            <a href="#faq">FAQ</a>
           </nav>
 
-          <a href="#demo" className="header-cta">Probar demo</a>
+          <a href="#demo" className="header-cta">Probar demo <span>→</span></a>
         </div>
       </header>
 
       <section id="top" className="hero-section">
+        <div className="hero-glow hero-glow--one" />
+        <div className="hero-glow hero-glow--two" />
         <div className="site-width hero-layout">
           <div className="hero-copy">
-            <div className="hero-eyebrow">
-              <span className="status-dot" aria-hidden="true" />
-              AI WORKSPACE · PORTFOLIO CONCEPT
-            </div>
-
-            <h1>Del contexto al siguiente paso, sin perder el hilo.</h1>
-
+            <div className="hero-eyebrow"><span>✦</span> AI-POWERED WORKFLOW · PORTFOLIO CONCEPT</div>
+            <h1>
+              Convierte conversaciones en
+              <span> trabajo accionable.</span>
+            </h1>
             <p>
-              SYNAPSE organiza notas, decisiones y follow-ups en un espacio de trabajo compacto para equipos que necesitan avanzar con claridad.
+              SYNAPSE transforma reuniones, notas, chats y correos en decisiones claras, tareas, responsables, fechas y próximos pasos para que tu equipo avance sin perder contexto.
             </p>
 
             <div className="hero-actions">
-              <a href="#demo" className="primary-action">Probar la experiencia</a>
-              <a href="#system" className="secondary-action">Ver cómo funciona</a>
+              <a href="#demo" className="primary-action">Probar demo <span>→</span></a>
+              <a href="#how" className="secondary-action">Ver cómo funciona</a>
             </div>
 
             <div className="hero-proof">
-              <span>Demo local</span>
-              <span>Sin registro</span>
-              <span>Sin datos reales</span>
+              <span>Decisions</span>
+              <span>Tasks</span>
+              <span>Owners</span>
+              <span>Deadlines</span>
             </div>
           </div>
 
-          <div id="demo" className="command-center-wrap">
-            <div className="command-center-head">
-              <div>
-                <span className="window-dot" aria-hidden="true" />
-                <span className="window-dot" aria-hidden="true" />
-                <span className="window-dot" aria-hidden="true" />
-              </div>
-              <span>Workspace / Meeting intelligence</span>
-              <span className="command-shortcut">⌘ K</span>
-            </div>
-            <SynapseDemo />
-          </div>
+          <NeuralBrain />
         </div>
       </section>
 
-      <section id="system" className="system-section">
-        <div className="site-width system-layout">
-          <div className="section-heading">
-            <span>01 · SYSTEM</span>
-            <h2>Un flujo simple para convertir conversación en trabajo.</h2>
-            <p>
-              Menos decoración y más producto: cada parte de la interfaz responde a una etapa concreta del flujo.
-            </p>
+      <section id="product" className="value-strip">
+        <div className="site-width value-strip-inner">
+          <span>INPUT</span><b>Meetings · Chat · Email · Docs</b>
+          <i>→</i>
+          <span>SYNAPSE</span><b>Context engine</b>
+          <i>→</i>
+          <span>OUTPUT</span><b>Decisions · Tasks · Owners · Risks</b>
+        </div>
+      </section>
+
+      <section id="how" className="features-section">
+        <div className="site-width section-heading centered-heading">
+          <span>HOW IT WORKS</span>
+          <h2>Todo lo necesario para pasar de contexto a ejecución.</h2>
+          <p>Cuatro etapas sencillas. Sin vender una IA genérica que “hace de todo”.</p>
+        </div>
+        <div className="site-width feature-grid">
+          {features.map(([title, copy], index) => (
+            <article key={title} className="feature-card">
+              <div className="feature-icon" aria-hidden="true">0{index + 1}</div>
+              <h3>{title}</h3>
+              <p>{copy}</p>
+              <span className="feature-arrow" aria-hidden="true">↗</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section id="demo" className="demo-section">
+        <div className="site-width section-heading demo-heading">
+          <div>
+            <span>PRODUCT DEMO</span>
+            <h2>De una nota de reunión a un workspace ejecutable.</h2>
+          </div>
+          <p>
+            Interactúa con una simulación más cercana a un producto real: selecciona contexto, ejecuta el análisis local y navega por resumen, decisiones, tareas y riesgos.
+          </p>
+        </div>
+
+        <div className="site-width product-demo-frame">
+          <SynapseDemo />
+        </div>
+      </section>
+
+      <section className="dashboard-section">
+        <div className="site-width dashboard-shell">
+          <div className="dashboard-sidebar" aria-hidden="true">
+            <div className="dashboard-logo">S</div>
+            <span className="is-active">Overview</span>
+            <span>Decisions</span>
+            <span>Actions</span>
+            <span>Meetings</span>
+            <span>Timeline</span>
+            <span>Settings</span>
           </div>
 
-          <div className="workflow-list">
-            {workflow.map((item) => (
-              <article key={item.number} className="workflow-item">
-                <span>{item.number}</span>
-                <div>
-                  <h3>{item.title}</h3>
-                  <p>{item.copy}</p>
+          <div className="dashboard-main">
+            <div className="dashboard-topline">
+              <div><span>SAMPLE WORKSPACE</span><h3>Execution overview</h3></div>
+              <span className="sample-data-pill">SAMPLE DATA</span>
+            </div>
+
+            <div className="metric-grid">
+              <article><span>Open actions</span><strong>12</strong><small>5 due this week</small></article>
+              <article><span>Decisions captured</span><strong>07</strong><small>2 need follow-up</small></article>
+              <article><span>Blocked items</span><strong>02</strong><small>Owner assigned</small></article>
+              <article><span>Upcoming deadlines</span><strong>05</strong><small>Next 7 days</small></article>
+            </div>
+
+            <div className="dashboard-grid">
+              <div className="dashboard-chart">
+                <div className="chart-head"><span>Action completion</span><b>Last 7 days</b></div>
+                <div className="chart-bars" aria-hidden="true">
+                  <i style={{height:"36%"}}/><i style={{height:"58%"}}/><i style={{height:"44%"}}/><i style={{height:"72%"}}/><i style={{height:"64%"}}/><i style={{height:"86%"}}/><i style={{height:"78%"}}/>
                 </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+                <div className="chart-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+              </div>
 
-      <section className="context-section">
-        <div className="site-width context-panel">
-          <div className="context-copy">
-            <span>02 · CONTEXT</span>
-            <h2>La decisión y la acción viven juntas.</h2>
-            <p>
-              El concepto evita una colección de dashboards. La prioridad es que el equipo entienda qué se decidió, quién sigue y por qué.
-            </p>
-          </div>
-
-          <div className="context-example" aria-label="Ejemplo conceptual de decisión y acciones">
-            <div className="context-decision">
-              <span>DECISION</span>
-              <strong>Release stays Friday</strong>
-              <p>Condicionado a analytics y QA móvil.</p>
-            </div>
-            <div className="context-actions">
-              <div><span>01</span><strong>Hero copy</strong><em>Sara · Today</em></div>
-              <div><span>02</span><strong>Analytics</strong><em>Diego · Thu</em></div>
-              <div><span>03</span><strong>Mobile QA</strong><em>QA · Next</em></div>
+              <div className="decision-feed">
+                <div className="chart-head"><span>Recent decisions</span><b>View all →</b></div>
+                <article><i>✓</i><div><strong>Release stays Friday</strong><span>Launch sync · 10:42</span></div></article>
+                <article><i>✓</i><div><strong>Security review before demo</strong><span>Sales handoff · 09:18</span></div></article>
+                <article><i>!</i><div><strong>Export bug blocks RC</strong><span>Bug triage · Yesterday</span></div></article>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section id="teams" className="teams-section">
-        <div className="site-width">
-          <div className="section-heading section-heading--compact">
-            <span>03 · USE CASES</span>
-            <h2>Mismo problema. Distintos equipos.</h2>
+        <div className="site-width teams-layout">
+          <div className="section-heading">
+            <span>BUILT AROUND REAL TEAM FRICTION</span>
+            <h2>Una misma capa de claridad para distintos equipos.</h2>
           </div>
-
-          <div className="team-grid">
-            {useCases.map(([title, copy], index) => (
-              <article key={title} className="team-item">
-                <span>0{index + 1}</span>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-                <b aria-hidden="true">↗</b>
-              </article>
-            ))}
+          <div className="team-list">
+            <article><span>01</span><div><h3>Product</h3><p>Roadmap, discovery, handoffs y decisiones que necesitan continuidad.</p></div><b>→</b></article>
+            <article><span>02</span><div><h3>Sales</h3><p>Requisitos, compromisos y próximos pasos después de cada conversación.</p></div><b>→</b></article>
+            <article><span>03</span><div><h3>Operations</h3><p>Bloqueos, acuerdos, owners y seguimiento entre múltiples canales.</p></div><b>→</b></article>
           </div>
-        </div>
-      </section>
-
-      <section className="trust-section">
-        <div className="site-width trust-bar">
-          <span>Conceptual requirements</span>
-          <div>Role-based access</div>
-          <div>Audit trail</div>
-          <div>Data controls</div>
         </div>
       </section>
 
       <section id="faq" className="faq-section">
         <div className="site-width faq-layout">
-          <div className="section-heading section-heading--compact">
-            <span>04 · FAQ</span>
-            <h2>Transparencia antes del CTA.</h2>
+          <div className="section-heading">
+            <span>FAQ</span>
+            <h2>Claridad también en lo que el concepto no afirma.</h2>
           </div>
-
           <div className="faq-list">
             {faqItems.map(([question, answer], index) => (
               <details key={question} open={index === 0}>
-                <summary>
-                  <span>0{index + 1}</span>
-                  <strong>{question}</strong>
-                  <b aria-hidden="true">+</b>
-                </summary>
+                <summary><span>0{index + 1}</span><strong>{question}</strong><b aria-hidden="true">+</b></summary>
                 <p>{answer}</p>
               </details>
             ))}
@@ -201,22 +196,21 @@ export default function Home() {
       </section>
 
       <section className="final-section">
+        <div className="final-glow" />
         <div className="site-width final-inner">
+          <div className="final-brain-mark" aria-hidden="true">S</div>
           <div>
-            <span>05 · TRY IT</span>
-            <h2>Prueba el flujo sin crear una cuenta.</h2>
-            <p>La experiencia es demostrativa y no envía información a ningún servicio externo.</p>
+            <span>CONTEXT → DECISION → ACTION</span>
+            <h2>Haz que la próxima conversación termine con trabajo claro.</h2>
+            <p>Demo conceptual. No crea una cuenta ni envía información a un servicio externo.</p>
           </div>
-          <a href="#demo" className="primary-action">Abrir demo</a>
+          <a href="#demo" className="primary-action">Probar demo <span>→</span></a>
         </div>
       </section>
 
       <footer className="site-footer">
         <div className="site-width footer-inner">
-          <div className="brand">
-            <span className="brand-mark" aria-hidden="true">S</span>
-            <span>SYNAPSE AI</span>
-          </div>
+          <div className="brand"><span className="brand-mark">S</span><span><b>SYNAPSE</b><small>AI WORKFLOW</small></span></div>
           <p>B2B SaaS · AI productivity · Portfolio concept</p>
           <p>UX/UI + Frontend by Sara Duque</p>
         </div>
