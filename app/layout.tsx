@@ -3,18 +3,19 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://synapse-ai-landing-nine.vercel.app"),
-  title: "SYNAPSE AI — Turn conversations into execution",
+  title: "SYNAPSE AI — Meeting Intelligence",
   description:
-    "Conceptual B2B AI productivity landing page that transforms meetings, notes, chats and emails into decisions, tasks, owners, deadlines and next steps.",
+    "Conceptual B2B meeting-intelligence product that turns meeting context into summaries, decisions, tasks, owners, deadlines and risks.",
   applicationName: "SYNAPSE AI",
   authors: [{ name: "Sara Duque" }],
   creator: "Sara Duque",
   keywords: [
-    "AI productivity",
     "meeting intelligence",
-    "B2B SaaS",
+    "AI meetings",
+    "meeting summary",
     "decision tracking",
     "task extraction",
+    "B2B SaaS",
     "UX/UI",
     "frontend",
     "Next.js",
@@ -24,9 +25,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "SYNAPSE AI — Turn conversations into execution",
+    title: "SYNAPSE AI — Meeting Intelligence",
     description:
-      "Concept product for turning team context into decisions, tasks, owners, risks and next steps.",
+      "Portfolio concept for turning meetings into summaries, decisions, tasks, owners and next steps.",
     url: "/",
     siteName: "SYNAPSE AI",
     locale: "es_CO",
@@ -34,9 +35,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "SYNAPSE AI — Turn conversations into execution",
+    title: "SYNAPSE AI — Meeting Intelligence",
     description:
-      "B2B AI productivity portfolio concept focused on context, decisions and execution.",
+      "B2B meeting-intelligence portfolio concept focused on meeting-to-execution workflows.",
   },
 };
 
