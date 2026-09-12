@@ -28,8 +28,8 @@ const samples: DemoSample[] = [
     note: "El prospecto pidió un sandbox y una revisión técnica. Paula prepara el resumen de requisitos. Marco coordina la demo con producto. Falta confirmar quién valida seguridad.",
     decision: "El siguiente paso es una demo técnica con requisitos resumidos y responsable de seguridad confirmado.",
     actions: [
-      { task: "Resumir requisitos del prospecto", owner: "Paula", timing: "Hoy" },
-      { task: "Coordinar demo con producto", owner: "Marco", timing: "Esta semana" },
+      { task: "Resumir requisitos", owner: "Paula", timing: "Hoy" },
+      { task: "Coordinar demo", owner: "Marco", timing: "Esta semana" },
       { task: "Asignar revisión de seguridad", owner: "Sin asignar", timing: "Pendiente" },
     ],
   },
@@ -39,8 +39,8 @@ const samples: DemoSample[] = [
     note: "El error de exportación bloquea a dos cuentas de prueba. Andrés reproduce el caso. Frontend prepara un fix. QA valida CSV y PDF antes de moverlo a release candidate.",
     decision: "El bug de exportación entra como prioridad del release candidate hasta completar validación en ambos formatos.",
     actions: [
-      { task: "Reproducir caso de exportación", owner: "Andrés", timing: "Ahora" },
-      { task: "Preparar fix frontend", owner: "Frontend", timing: "Después de repro" },
+      { task: "Reproducir exportación", owner: "Andrés", timing: "Ahora" },
+      { task: "Preparar fix frontend", owner: "Frontend", timing: "Después" },
       { task: "Validar CSV y PDF", owner: "QA", timing: "Antes de RC" },
     ],
   },
@@ -71,14 +71,12 @@ export function SynapseDemo() {
     <div className="demo-shell">
       <div className="demo-input-panel">
         <div className="panel-label-row">
-          <span className="panel-label">01 · INPUT</span>
-          <span className="demo-badge">SIMULACIÓN LOCAL</span>
+          <span className="panel-label">INPUT / NOTES</span>
+          <span className="demo-badge">LOCAL DEMO</span>
         </div>
 
-        <h3>Pega una nota de reunión.</h3>
-        <p className="panel-copy">
-          El demo no usa un modelo real ni envía información. Cambia entre ejemplos para ver cómo se estructura la salida.
-        </p>
+        <h3>Contexto de reunión</h3>
+        <p className="panel-copy">Selecciona un ejemplo o edita la nota antes de ejecutar la simulación.</p>
 
         <div className="sample-switcher" aria-label="Ejemplos de notas">
           {samples.map((sample) => (
@@ -99,12 +97,12 @@ export function SynapseDemo() {
           <textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            rows={8}
+            rows={6}
             aria-describedby="demo-note-help"
           />
         </label>
         <p id="demo-note-help" className="field-help">
-          Puedes editar el texto; la transformación mostrada sigue siendo una demostración predefinida.
+          La salida es predefinida. No se envían datos a un modelo ni se almacena información.
         </p>
 
         <button type="button" className="demo-run" onClick={runDemo}>
@@ -114,7 +112,7 @@ export function SynapseDemo() {
 
       <div className="demo-output-panel" aria-live="polite">
         <div className="panel-label-row">
-          <span className="panel-label">02 · OUTPUT</span>
+          <span className="panel-label">OUTPUT / EXECUTION</span>
           <span className="output-status"><i /> READY</span>
         </div>
 
@@ -125,7 +123,7 @@ export function SynapseDemo() {
 
         <div className="action-list">
           <div className="action-list-head">
-            <span>Acciones detectadas</span>
+            <span>Acciones</span>
             <span>{String(result.actions.length).padStart(2, "0")}</span>
           </div>
           {result.actions.map((action, index) => (
